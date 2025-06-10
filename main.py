@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, constr
 from typing import List
 from enum import Enum
+from uuid import uuid4
+from datetime import date
+
 
 app = FastAPI()
 
@@ -20,9 +23,22 @@ class AccountCreate(BaseModel):
 class Account(AccountCreate):
     id: int
 
+from pydantic import BaseModel
+
+class PaymentCreate(BaseModel):
+    from_account_id: int
+    to_account_id: int
+    amount_in_euros: int
+    payment_date: date
+
+class Payment(PaymentCreate):
+    id: str
+
+
 # In-memory list to simulate database
 accounts: List[Account] = []
 next_id = 1
+payments: List[Payment] = []
 
 @app.post("/accounts/", response_model=Account)
 def create_account(account: AccountCreate):
@@ -50,3 +66,32 @@ def delete_account(account_id: int):
             del accounts[i]
             return {"detail": "Account deleted"}
     raise HTTPException(status_code=404, detail="Account not found")
+
+@app.post("/payments/", response_model=Payment)
+def create_payment(payment: PaymentCreate):
+    # Validation: Amount must be > 0
+    if payment.amount_in_euros <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than 0")
+
+    # Validation: from and to accounts must exist
+    from_exists = any(acc.id == payment.from_account_id for acc in accounts)
+    to_exists = any(acc.id == payment.to_account_id for acc in accounts)
+
+    if not (from_exists and to_exists):
+        raise HTTPException(status_code=400, detail="Invalid account ID(s)")
+
+    new_payment = Payment(id=str(uuid4()), **payment.dict())
+    payments.append(new_payment)
+    return new_payment
+
+@app.get("/payments/", response_model=List[Payment])
+def get_all_payments():
+    return payments
+
+@app.get("/payments/{payment_id}", response_model=Payment)
+def get_payment_by_id(payment_id: str):
+    for payment in payments:
+        if payment.id == payment_id:
+            return payment
+    raise HTTPException(status_code=404, detail="Payment not found")
+
