@@ -4,6 +4,8 @@ from typing import List
 from enum import Enum
 from uuid import uuid4
 from datetime import date
+import json
+import os
 
 
 app = FastAPI()
@@ -40,12 +42,36 @@ accounts: List[Account] = []
 next_id = 1
 payments: List[Payment] = []
 
+# Function to save accounts to file
+def save_accounts_to_file():
+    with open("account.txt", "w") as f:
+        # Convert accounts to list of dictionaries
+        accounts_data = [account.dict() for account in accounts]
+        json.dump(accounts_data, f, indent=4)
+
+# Function to load accounts from file
+def load_accounts_from_file():
+    global accounts, next_id
+    if os.path.exists("account.txt"):
+        try:
+            with open("account.txt", "r") as f:
+                accounts_data = json.load(f)
+                accounts = [Account(**account) for account in accounts_data]
+                if accounts:
+                    next_id = max(acc.id for acc in accounts) + 1
+        except Exception as e:
+            print(f"Error loading accounts: {e}")
+
+# Load accounts when starting the application
+load_accounts_from_file()
+
 @app.post("/accounts/", response_model=Account)
 def create_account(account: AccountCreate):
     global next_id
     new_account = Account(id=next_id, **account.dict())
     accounts.append(new_account)
     next_id += 1
+    save_accounts_to_file()  # Save after creating new account
     return new_account
 
 @app.get("/accounts/", response_model=List[Account])
@@ -64,6 +90,7 @@ def delete_account(account_id: int):
     for i, acc in enumerate(accounts):
         if acc.id == account_id:
             del accounts[i]
+            save_accounts_to_file()  # Save after deleting account
             return {"detail": "Account deleted"}
     raise HTTPException(status_code=404, detail="Account not found")
 

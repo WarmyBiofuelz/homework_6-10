@@ -1,0 +1,20 @@
+[
+    {
+        "type": "personal",
+        "person_name": "Bob",
+        "address": "Blue Avenue 10",
+        "id": 1
+    },
+    {
+        "type": "business",
+        "person_name": "Alice",
+        "address": "Green Street 5",
+        "id": 2
+    },
+    {
+        "type": "personal",
+        "person_name": "Daniel Novak",
+        "address": "9 Green Hill Road",
+        "id": 4
+    }
+]
